@@ -460,34 +460,24 @@ function renderTable() {
 
   const slice = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const canalIcon = r => {
-    const d = (r.detalhes || '').toLowerCase() + ' ' + (r.canal || '').toLowerCase();
-    if (d.includes('whatsapp')) return '<i class="ti ti-brand-whatsapp" style="color:#25D366;font-size:14px;vertical-align:-2px"></i> WhatsApp';
-    if (d.includes('email') || d.includes('e-mail')) return '<i class="ti ti-mail" style="font-size:14px;vertical-align:-2px"></i> E-mail';
-    if (d.includes('telefone') || d.includes('phone')) return '<i class="ti ti-phone" style="font-size:14px;vertical-align:-2px"></i> Telefone';
-    if (d.includes('portal')) return '<i class="ti ti-world" style="font-size:14px;vertical-align:-2px"></i> Portal';
-    return esc(r.canal) || '-';
-  };
-
   document.getElementById('tblBody').innerHTML = slice.length
     ? slice.map(r => `
         <tr>
           <td style="font-weight:600">${esc(r.protocolo)}</td>
           <td>${esc(r.abertura)}</td>
-          <td>${canalIcon(r)}</td>
           <td style="text-align:center">${formatDuration(r.resposta)}</td>
+          <td style="text-align:center">${formatDuration(r.tempoAtend)}</td>
           <td>${esc(r.fechamento) || '-'}</td>
           <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">${esc(r.solucao) || '-'}</td>
           <td style="text-align:center">${formatDuration(r.tempoResolMin)}</td>
           <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(r.setor) || '-'}</td>
-          <td><span class="badge ${prioClass(r.prioridade)}">${esc(r.prioridade) || '-'}</span></td>
           <td><span class="badge ${STATUS_MAP[r.status]?.cls || ''}">${STATUS_MAP[r.status]?.label || esc(r.status)}</span></td>
           <td>${esc(r.criadoPor) || '-'}</td>
           <td>${esc(r.atendente) || '-'}</td>
           <td>${esc(r.contato) || '-'}${r.empresa ? `<span class="cell-sub">${esc(r.empresa)}</span>` : ''}</td>
         </tr>
       `).join('')
-    : `<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--text-tertiary)">Nenhum resultado encontrado</td></tr>`;
+    : `<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--text-tertiary)">Nenhum resultado encontrado</td></tr>`;
 
   // Pagination
   const pg = document.getElementById('pagination');

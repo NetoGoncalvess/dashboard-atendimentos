@@ -513,8 +513,7 @@ tr:hover td { background: var(--bg-secondary); }
                   <th>Protocolo</th>
                   <th>Data e Hora da Abertura</th>
                   <th>Canal de Abertura</th>
-                  <th>Tempo Atendimento (min)</th>
-                  <th>Tempo 1ª Resposta (min)</th>
+                  <th>Tempo 1ª Resposta</th>
                   <th>Fechamento/Cancelamento</th>
                   <th>Solução / Motivo Cancelamento</th>
                   <th>Tempo Resolução</th>
@@ -1015,8 +1014,7 @@ function renderTable() {
           <td style="font-weight:600">${esc(r.protocolo)}</td>
           <td>${esc(r.abertura)}</td>
           <td>${canalIcon(r)}</td>
-          <td style="text-align:center">${r.tempoAtend || '-'}</td>
-          <td style="text-align:center">${r.resposta || '-'}</td>
+          <td style="text-align:center">${formatDuration(r.resposta)}</td>
           <td>${esc(r.fechamento) || '-'}</td>
           <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">${esc(r.solucao) || '-'}</td>
           <td style="text-align:center">${formatDuration(r.tempoResolMin)}</td>
@@ -1028,7 +1026,7 @@ function renderTable() {
           <td>${esc(r.contato) || '-'}${r.empresa ? `<span class="cell-sub">${esc(r.empresa)}</span>` : ''}</td>
         </tr>
       `).join('')
-    : `<tr><td colspan="14" style="text-align:center;padding:40px;color:var(--text-tertiary)">Nenhum resultado encontrado</td></tr>`;
+    : `<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--text-tertiary)">Nenhum resultado encontrado</td></tr>`;
 
   // Pagination
   const pg = document.getElementById('pagination');
@@ -1162,7 +1160,7 @@ function loadSampleData() {
       criadoPor: i % 3 === 0 ? 'Portal' : 'Sistema',
       contato: contatos[i % contatos.length],
       empresa: empresas[i % empresas.length],
-      resposta: 1 + (i % 25),
+      resposta: 1 + (i % 25) + (i % 7) * 60,
       tempoAtend: 5 + (i % 40),
       fechamento,
       tempoResolMin,

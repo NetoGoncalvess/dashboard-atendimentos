@@ -475,8 +475,7 @@ function renderTable() {
           <td style="font-weight:600">${esc(r.protocolo)}</td>
           <td>${esc(r.abertura)}</td>
           <td>${canalIcon(r)}</td>
-          <td style="text-align:center">${r.tempoAtend || '-'}</td>
-          <td style="text-align:center">${r.resposta || '-'}</td>
+          <td style="text-align:center">${formatDuration(r.resposta)}</td>
           <td>${esc(r.fechamento) || '-'}</td>
           <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">${esc(r.solucao) || '-'}</td>
           <td style="text-align:center">${formatDuration(r.tempoResolMin)}</td>
@@ -488,7 +487,7 @@ function renderTable() {
           <td>${esc(r.contato) || '-'}${r.empresa ? `<span class="cell-sub">${esc(r.empresa)}</span>` : ''}</td>
         </tr>
       `).join('')
-    : `<tr><td colspan="14" style="text-align:center;padding:40px;color:var(--text-tertiary)">Nenhum resultado encontrado</td></tr>`;
+    : `<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--text-tertiary)">Nenhum resultado encontrado</td></tr>`;
 
   // Pagination
   const pg = document.getElementById('pagination');

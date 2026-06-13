@@ -18,28 +18,16 @@ const STATUS_MAP = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-// Builds a case/whitespace-insensitive lookup map for a sheet_to_json row,
-// so headers like "Data e hora do Fechamento/Cancelamento" and
-// "Data e Hora do Fechamento/Cancelamento" both match.
-function normalizeRow(row) {
-  const map = {};
-  for (const k in row) {
-    map[String(k).trim().toLowerCase().replace(/\s+/g, ' ')] = row[k];
-  }
-  return map;
-}
-
 // Picks the first non-empty value among several possible Excel header names
-function pick(map, keys) {
+function pick(row, keys) {
   for (const k of keys) {
-    const nk = k.trim().toLowerCase().replace(/\s+/g, ' ');
-    if (map[nk] !== undefined && map[nk] !== null && map[nk] !== '') return map[nk];
+    if (row[k] !== undefined && row[k] !== null && row[k] !== '') return row[k];
   }
   return '';
 }
 
-function pickNum(map, keys) {
-  const v = pick(map, keys);
+function pickNum(row, keys) {
+  const v = pick(row, keys);
   const n = parseFloat(String(v).replace(',', '.'));
   return isNaN(n) ? 0 : n;
 }
@@ -53,28 +41,6 @@ function parseDateStr(s) {
   m = str.match(/(\d{4})-(\d{2})-(\d{2})/);
   if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
   return null;
-}
-
-// Parses a date AND time, e.g. "12/06/2026 - 08:36" or "2026-06-12 08:36"
-function parseDateTime(s) {
-  if (!s) return null;
-  const str = String(s);
-  let m = str.match(/(\d{2})\/(\d{2})\/(\d{4})\s*[-–]?\s*(\d{2}):(\d{2})/);
-  if (m) return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]);
-  m = str.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
-  if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
-  return null;
-}
-
-// Formats a duration given in minutes as "Xmin" / "Xh Ymin" / "Xd Yh"
-function formatDuration(min) {
-  if (!min || min <= 0) return '-';
-  min = Math.round(min);
-  if (min < 60) return min + ' min';
-  const h = Math.floor(min / 60), m = min % 60;
-  if (h < 24) return h + 'h' + (m ? ' ' + m + 'min' : '');
-  const d = Math.floor(h / 24), hr = h % 24;
-  return d + 'd' + (hr ? ' ' + hr + 'h' : '');
 }
 
 function getHour(s) {
@@ -105,46 +71,25 @@ function parseXLSX(file) {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
-      allData = json.map(r => {
-        const row = normalizeRow(r);
-
-        const abertura  = pick(row, ['Data e Hora da Abertura', 'Data e Hora de Abertura', 'Abertura']);
-        const fechamento = pick(row, ['Data e Hora do Fechamento/Cancelamento', 'Data e Hora de Fechamento/Cancelamento', 'Fechamento']);
-
-        // Tempo de resolução = Fechamento/Cancelamento - Abertura (em minutos)
-        let tempoResolMin = 0;
-        const dAbertura = parseDateTime(abertura);
-        const dFechamento = parseDateTime(fechamento);
-        if (dAbertura && dFechamento) {
-          const diff = Math.round((dFechamento - dAbertura) / 60000);
-          if (diff > 0) tempoResolMin = diff;
-        }
-        if (!tempoResolMin) {
-          // fallback: usa coluna explícita "Tempo Resolução do Chamado (dias)" se existir
-          const dias = pickNum(row, ['Tempo Resolução do Chamado (dias)', 'Tempo de Resolução do Chamado (dias)', 'Tempo Resolução (dias)']);
-          if (dias > 0) tempoResolMin = Math.round(dias * 24 * 60);
-        }
-
-        return {
-          protocolo:    pick(row, ['Protocolo']),
-          abertura,
-          canal:        pick(row, ['Canal de Abertura', 'Canal']),
-          detalhes:     pick(row, ['Detalhes do canal de Abertura', 'Detalhes do Canal de Abertura']),
-          atendente:    pick(row, ['Atendente']),
-          setor:        pick(row, ['Setor']),
-          status:       pick(row, ['Status']),
-          prioridade:   pick(row, ['Prioridade']),
-          criadoPor:    pick(row, ['Atendimento Criado Por', 'Criado Por']),
-          contato:      pick(row, ['Nome do Contato', 'Contato']),
-          empresa:      pick(row, ['Empresa']),
-          resposta:     pickNum(row, ['Tempo da Primeira Resposta (minutos)', 'Tempo da 1ª Resposta (minutos)', 'Tempo da 1ª Resposta (min)']),
-          tempoAtend:   pickNum(row, ['Tempo Gasto no Atendimento (minutos)', 'Tempo Gasto no Atendimento (min)', 'Tempo de Atendimento (minutos)']),
-          fechamento,
-          tempoResolMin,
-          solucao:      pick(row, ['Solução do Problema/Motivo Cancelamento', 'Solução do Problema / Motivo Cancelamento']),
-          descricao:    pick(row, ['Descrição do Problema']),
-        };
-      });
+      allData = json.map(r => ({
+        protocolo:    pick(r, ['Protocolo']),
+        abertura:     pick(r, ['Data e Hora da Abertura', 'Data e Hora de Abertura', 'Abertura']),
+        canal:        pick(r, ['Canal de Abertura', 'Canal']),
+        detalhes:     pick(r, ['Detalhes do canal de Abertura', 'Detalhes do Canal de Abertura']),
+        atendente:    pick(r, ['Atendente']),
+        setor:        pick(r, ['Setor']),
+        status:       pick(r, ['Status']),
+        prioridade:   pick(r, ['Prioridade']),
+        criadoPor:    pick(r, ['Atendimento Criado Por', 'Criado Por']),
+        contato:      pick(r, ['Nome do Contato', 'Contato']),
+        empresa:      pick(r, ['Empresa']),
+        resposta:     pickNum(r, ['Tempo da Primeira Resposta (minutos)', 'Tempo da 1ª Resposta (minutos)', 'Tempo da 1ª Resposta (min)']),
+        tempoAtend:   pickNum(r, ['Tempo Gasto no Atendimento (minutos)', 'Tempo Gasto no Atendimento (min)', 'Tempo de Atendimento (minutos)']),
+        fechamento:   pick(r, ['Data e Hora do Fechamento/Cancelamento', 'Data e Hora de Fechamento/Cancelamento', 'Fechamento']),
+        tempoResol:   pickNum(r, ['Tempo Resolução do Chamado (dias)', 'Tempo de Resolução do Chamado (dias)', 'Tempo Resolução (dias)']),
+        solucao:      pick(r, ['Solução do Problema/Motivo Cancelamento', 'Solução do Problema / Motivo Cancelamento']),
+        descricao:    pick(r, ['Descrição do Problema']),
+      }));
 
       populateFilters();
       document.getElementById('uploadSection').style.display = 'none';
@@ -257,7 +202,7 @@ function renderMetrics(data) {
 
   const tempoAtendVals = data.map(r => r.tempoAtend).filter(v => v > 0);
   const respVals       = data.map(r => r.resposta).filter(v => v > 0);
-  const resolVals      = data.map(r => r.tempoResolMin).filter(v => v > 0);
+  const resolVals      = data.map(r => r.tempoResol).filter(v => v > 0);
 
   const tempoAtendAvg = Math.round(avg(tempoAtendVals));
   const respAvg       = Math.round(avg(respVals));
@@ -302,7 +247,7 @@ function renderMetrics(data) {
     </div>
     <div class="mc c-indigo">
       <div class="mc-icon"><i class="ti ti-calendar-time"></i></div>
-      <div class="mc-val">${resolVals.length ? formatDuration(resolAvg) : '-'}</div>
+      <div class="mc-val">${resolVals.length ? resolAvg.toFixed(1).replace('.', ',') + ' dias' : '-'}</div>
       <div class="mc-lbl">Tempo médio resolução</div>
     </div>
   `;
@@ -479,7 +424,7 @@ function renderTable() {
           <td style="text-align:center">${r.resposta || '-'}</td>
           <td>${esc(r.fechamento) || '-'}</td>
           <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">${esc(r.solucao) || '-'}</td>
-          <td style="text-align:center">${formatDuration(r.tempoResolMin)}</td>
+          <td style="text-align:center">${r.tempoResol || '-'}</td>
           <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(r.setor) || '-'}</td>
           <td><span class="badge ${prioClass(r.prioridade)}">${esc(r.prioridade) || '-'}</span></td>
           <td><span class="badge ${STATUS_MAP[r.status]?.cls || ''}">${STATUS_MAP[r.status]?.label || esc(r.status)}</span></td>
@@ -524,7 +469,7 @@ function buildExportRows() {
     'Tempo da 1ª Resposta (min)': r.resposta,
     'Data e Hora do Fechamento/Cancelamento': r.fechamento,
     'Solução do Problema/Motivo Cancelamento': r.solucao,
-    'Tempo Resolução do Chamado': formatDuration(r.tempoResolMin),
+    'Tempo Resolução do Chamado (dias)': r.tempoResol,
     'Setor': r.setor,
     'Prioridade': r.prioridade,
     'Status': STATUS_MAP[r.status]?.label || r.status,
